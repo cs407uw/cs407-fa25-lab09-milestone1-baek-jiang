@@ -23,11 +23,14 @@ class BallViewModel : ViewModel() {
      */
     fun initBall(fieldWidth: Float, fieldHeight: Float, ballSizePx: Float) {
         if (ball == null) {
-            // TODO: Initialize the ball instance
-            // ball = Ball(...)
-
-            // TODO: Update the StateFlow with the initial position
-            // _ballPosition.value = Offset(ball!!.posX, ball!!.posY)
+            ball = Ball(
+                backgroundWidth = fieldWidth,
+                backgroundHeight = fieldHeight,
+                ballSize = ballSizePx
+            )
+            ball?.let {
+                _ballPosition.value = Offset(it.posX, it.posY)
+            }
         }
     }
 
@@ -35,37 +38,46 @@ class BallViewModel : ViewModel() {
      * Called by the SensorEventListener in the UI.
      */
     fun onSensorDataChanged(event: SensorEvent) {
-        // Ensure ball is initialized
         val currentBall = ball ?: return
 
         if (event.sensor.type == Sensor.TYPE_GRAVITY) {
             if (lastTimestamp != 0L) {
-                // TODO: Calculate the time difference (dT) in seconds
-                // Hint: event.timestamp is in nanoseconds
-                // val NS2S = 1.0f / 1000000000.0f
-                // val dT = ...
+                val NS2S = 1.0f / 1_000_000_000.0f
+                var dT = (event.timestamp - lastTimestamp) * NS2S
+                lastTimestamp = event.timestamp
 
-                // TODO: Update the ball's position and velocity
-                // Hint: The sensor's x and y-axis are inverted
-                // currentBall.updatePositionAndVelocity(xAcc = ..., yAcc = ..., dT = ...)
+                // 🔹 Make it respond more quickly
+                dT *= 2.0f   // increase if you still want snappier motion
 
-                // TODO: Update the StateFlow to notify the UI
-                // _ballPosition.update { Offset(currentBall.posX, currentBall.posY) }
+                // 🔹 Make tilts feel stronger
+                val speedScale = 6.0f
+
+                // ✅ Mapping you said worked:
+                val xAcc = -event.values[0] * speedScale
+                val yAcc =  event.values[1] * speedScale
+
+                currentBall.updatePositionAndVelocity(
+                    xAcc = xAcc,
+                    yAcc = yAcc,
+                    dT = dT
+                )
+
+                _ballPosition.update {
+                    Offset(currentBall.posX, currentBall.posY)
+                }
+            } else {
+                // First reading: just initialize the timestamp
+                lastTimestamp = event.timestamp
             }
-
-            // TODO: Update the lastTimestamp
-            // lastTimestamp = ...
         }
     }
 
+
     fun reset() {
-        // TODO: Reset the ball's state
-        // ball?.reset()
-
-        // TODO: Update the StateFlow with the reset position
-        // ball?.let { ... }
-
-        // TODO: Reset the lastTimestamp
-        // lastTimestamp = 0L
+        ball?.reset()
+        ball?.let {
+            _ballPosition.value = Offset(it.posX, it.posY)
+        }
+        lastTimestamp = 0L
     }
 }
